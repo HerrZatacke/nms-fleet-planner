@@ -1,7 +1,0 @@
-{"done":1596150411,"text":"Mixed"}
-{"done":1596184431,"text":"Industrial"}
-{"done":1596201471,"text":"Mixed"}
-{"done":1596212331,"text":"Exploration"}
-{"done":1596213591,"text":"Trade"}
-{"done":1596236683,"text":"Mixed"}
-{"done":1596261051,"text":"Industrial"}
