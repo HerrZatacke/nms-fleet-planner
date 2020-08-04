@@ -1,0 +1,9 @@
+@import '~reset-css/sass/reset';
+
+body {
+  @include fontFamily;
+}
+
+* {
+  box-sizing: border-box;
+}
