@@ -53,7 +53,7 @@ result.forEach(({ done, text }) => {
     const txt = relativeColor(text);
     const relative = relativeColor(date.fromNow());
 
-    console.log(`at ${time} fleet "${txt}" ${arrival} ${relative}`);
+    console.log(`at ${time} fleet "${txt}" ${arrival}. (${relative})`);
   }
 });
 
