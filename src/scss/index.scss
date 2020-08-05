@@ -10,23 +10,49 @@ body {
   box-sizing: border-box;
 }
 
-input {
-  border: none;
-  width: 24px;
-  background: #e3e3e3;
-  padding: 4px;
+.edit-form {
+  input {
+    border: none;
+    width: 24px;
+    background: #e3e3e3;
+    padding: 4px;
 
-  &#description {
-    margin: 0 10px;
-    width: 200px;
+    &#description {
+      margin: 0 10px;
+      width: 200px;
+    }
   }
+
+  #add:before {
+    content: 'Add';
+  }
+
+  #cancel {
+    display: none;
+  }
+
+  &--edit {
+    #add:before {
+      content: 'Update';
+    }
+
+    #cancel {
+      display: inline;
+    }
+  }
+
+  // &--show-deleted {}
+
 }
 
 li {
   padding: 20px 0 0 0;
 
+  &.deleted {
+    background: #ffeded;
+  }
+
   button {
     display: inline;
   }
 }
-

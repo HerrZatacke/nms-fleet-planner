@@ -7,9 +7,14 @@
   </head>
   <body>
     <div id="app">
-      <input type="text" min="0" max="100" step="1" id="hours" placeholder="00" />:<input type="text" min="0" max="60" step="1" id="minutes" placeholder="00" />:<input type="text" min="0" max="60" step="1" id="seconds" placeholder="00" />
-      <input type="text" id="description" placeholder="description" />
-      <button type="button" id="add">add</button>
+      <div class="edit-form">
+        <input type="text" min="0" max="100" step="1" id="hours" placeholder="00" />:<input type="text" min="0" max="60" step="1" id="minutes" placeholder="00" />:<input type="text" min="0" max="60" step="1" id="seconds" placeholder="00" />
+        <input type="text" id="description" placeholder="description" />
+        <input type="hidden" id="done" />
+        <button type="button" id="add"></button>
+        <button type="button" id="cancel">Cancel</button>
+        <button type="button" id="showDeleted">Show Deleted</button>
+      </div>
       <ul id="expeditions"></ul>
     </div>
   </body>

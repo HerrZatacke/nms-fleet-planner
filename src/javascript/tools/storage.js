@@ -5,10 +5,16 @@ dayjs.extend(relativeTime);
 
 class Storage {
 
-  constructor({ domNode }) {
+  constructor({ domNode, showDeleted }) {
     this.storageKey = 'fleet-expeditions';
     this.domNode = domNode;
+    this.showDeleted = showDeleted || false;
 
+    this.render();
+  }
+
+  setShowDeleted(showDeleted) {
+    this.showDeleted = showDeleted;
     this.render();
   }
 
@@ -21,7 +27,7 @@ class Storage {
     return JSON.parse(expeditionsList);
   }
 
-  addExpedition(hours, minutes, text) {
+  addExpedition(hours, minutes, seconds = 0, text) {
     if (isNaN(hours) || isNaN(minutes) || !text.trim()) {
       return;
     }
@@ -29,7 +35,11 @@ class Storage {
     const expeditions = this.getExpeditions();
 
     expeditions.push({
-      done: dayjs().add(hours, 'hours').add(minutes, 'minutes').unix() || dayjs().unix(),
+      done: dayjs()
+        .add(hours, 'hours')
+        .add(minutes, 'minutes')
+        .add(seconds, 'seconds')
+        .unix() || dayjs().unix(),
       text: text.trim(),
     });
 
@@ -39,14 +49,21 @@ class Storage {
 
   removeExpedition(deleteDone) {
     const expeditions = this.getExpeditions()
-      .map((expedition) => (
-        {
-          ...expedition,
-          hide: expedition.done === parseInt(deleteDone, 10) ? true : expedition.hide,
-        }
-      ));
+      .map((expedition) => {
+        const hide = expedition.done === parseInt(deleteDone, 10);
 
-    console.log(expeditions);
+        if (this.showDeleted && hide) {
+          return null;
+        }
+
+        return (
+          {
+            ...expedition,
+            hide: hide ? true : expedition.hide,
+          }
+        );
+      })
+      .filter(Boolean);
 
     localStorage.setItem(this.storageKey, JSON.stringify(this.sortExpeditions(expeditions)));
     this.render();
@@ -67,18 +84,46 @@ class Storage {
       });
   }
 
+  getExpedition(dataDone) {
+    return this.getExpeditions()
+      .find(({ done }) => done === parseInt(dataDone, 10)) || null;
+  }
+
+  getExpeditionData(rawData) {
+    const date = dayjs.unix(rawData.done);
+
+    const duration = date
+      .subtract(dayjs().get('hours'), 'hours')
+      .subtract(dayjs().get('minutes'), 'minutes')
+      .subtract(dayjs().get('seconds'), 'seconds');
+
+    return {
+      ...rawData,
+      date,
+      duration,
+      inHours: duration.format('HH'),
+      inMinutes: duration.format('mm'),
+      inSeconds: duration.format('ss'),
+      isPast: !!date.isBefore(dayjs()),
+      arrival: date.isBefore(dayjs()) ? 'arrived' : 'will be back',
+      time: date.format('ddd, HH:mm'),
+      relative: date.fromNow(),
+    };
+  }
+
   render() {
     // eslint-disable-next-line no-param-reassign
     this.domNode.innerHTML = this.getExpeditions()
+      .map(this.getExpeditionData)
       .map((expedition) => (
-        Storage.renderExpedition(expedition)
+        this.renderExpedition(expedition)
       ))
       .join('');
   }
 
-  static renderExpedition({ done, text, hide }) {
+  renderExpedition({ done, text, hide, isPast, arrival, time, relative }) {
 
-    if (hide) {
+    if (hide && !this.showDeleted) {
       return '';
     }
 
@@ -86,13 +131,17 @@ class Storage {
       `<span style="color:${color};">${txt}</span>`
     );
 
-    const date = dayjs.unix(done);
-    const relativeColor = date.isBefore(dayjs()) ? colorize('red') : colorize('green');
-    const arrival = relativeColor(date.isBefore(dayjs()) ? 'arrived' : 'will be back');
-    const time = relativeColor(date.format('ddd, HH:mm'));
-    const relative = relativeColor(date.fromNow());
+    const relativeColor = isPast ? colorize('red') : colorize('green');
+    const arrivalC = relativeColor(arrival);
+    const timeC = relativeColor(time);
+    const relativeC = relativeColor(relative);
 
-    return `<li><button type="button" data-done="${done}">X</button> at ${time} fleet "${text}" ${arrival}. (${relative})</li>`;
+    return `
+<li class="${hide ? 'deleted' : ''}">
+  <button type="button" data-del="${done}">${this.showDeleted ? 'Purge' : 'Delete'}</button>
+  <button type="button" data-edit="${done}">Edit</button>
+  at ${timeC} fleet "${text}" ${arrivalC}. (${relativeC})
+</li>`;
   }
 }
 
