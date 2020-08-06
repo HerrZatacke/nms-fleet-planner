@@ -1,6 +1,28 @@
 import '../scss/index.scss';
 import Storage from './tools/storage';
 
+const renderExpedition = ({ done, text, hide, isPast, arrival, relativeTime, time, relative }, showDeleted) => {
+  if (hide && !showDeleted) {
+    return '';
+  }
+
+  const colorize = (color) => (txt) => (
+    `<span style="color:${color};">${txt}</span>`
+  );
+
+  const relativeColor = isPast ? colorize('red') : colorize('green');
+  const arrivalC = relativeColor(arrival);
+  const timeC = relativeColor(time);
+  const relativeC = relativeColor(relative);
+
+  return (`
+<li class="${hide ? 'deleted' : ''}" title="${relativeTime}">
+  <button type="button" data-del="${done}">${showDeleted ? 'Purge' : 'Delete'}</button>
+  <button type="button" data-edit="${done}">Edit</button>
+  at ${timeC} fleet "${text}" ${arrivalC}. (${relativeC})
+</li>`);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   const addButton = document.getElementById('add');
   const cancelButton = document.getElementById('cancel');
@@ -16,6 +38,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const storage = new Storage({
     domNode: expeditionsList,
     showDeleted: false,
+    renderFn: (showDeleted) => (expeditions) => {
+      expeditionsList.innerHTML = expeditions
+        .map((expedition) => (
+          renderExpedition(expedition, showDeleted)
+        ))
+        .join('');
+    },
   });
 
   const clearValues = () => {
@@ -53,8 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
   expeditionsList.addEventListener('click', ({ target }) => {
     const { del, edit } = target.dataset;
 
-    console.log({ del, edit });
-
     if (del !== undefined) {
       storage.removeExpedition(del);
       clearValues();
@@ -68,14 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
       secondsInput.value = expeditionData.inSeconds;
       hiddenDoneInput.value = expeditionData.done;
       descriptionInput.value = expeditionData.text;
-      // storage.removeExpedition(edit);
-      // storage.addExpedition(
-      //   parseInt(hoursInput.value, 10),
-      //   parseInt(minutesInput.value, 10),
-      //   parseInt(secondsInput.value, 10),
-      //   descriptionInput.value.trim(),
-      // );
-      // clearValues();
     }
 
   });

@@ -1,14 +1,14 @@
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
+import relTime from 'dayjs/plugin/relativeTime';
 
-dayjs.extend(relativeTime);
+dayjs.extend(relTime);
 
 class Storage {
 
-  constructor({ domNode, showDeleted }) {
+  constructor({ showDeleted, renderFn }) {
     this.storageKey = 'fleet-expeditions';
-    this.domNode = domNode;
     this.showDeleted = showDeleted || false;
+    this.renderFn = renderFn;
 
     this.render();
   }
@@ -104,6 +104,7 @@ class Storage {
       inHours: duration.format('HH'),
       inMinutes: duration.format('mm'),
       inSeconds: duration.format('ss'),
+      relativeTime: duration.format('HH:mm:ss'),
       isPast: !!date.isBefore(dayjs()),
       arrival: date.isBefore(dayjs()) ? 'arrived' : 'will be back',
       time: date.format('ddd, HH:mm'),
@@ -112,36 +113,9 @@ class Storage {
   }
 
   render() {
-    // eslint-disable-next-line no-param-reassign
-    this.domNode.innerHTML = this.getExpeditions()
-      .map(this.getExpeditionData)
-      .map((expedition) => (
-        this.renderExpedition(expedition)
-      ))
-      .join('');
-  }
-
-  renderExpedition({ done, text, hide, isPast, arrival, time, relative }) {
-
-    if (hide && !this.showDeleted) {
-      return '';
-    }
-
-    const colorize = (color) => (txt) => (
-      `<span style="color:${color};">${txt}</span>`
-    );
-
-    const relativeColor = isPast ? colorize('red') : colorize('green');
-    const arrivalC = relativeColor(arrival);
-    const timeC = relativeColor(time);
-    const relativeC = relativeColor(relative);
-
-    return `
-<li class="${hide ? 'deleted' : ''}">
-  <button type="button" data-del="${done}">${this.showDeleted ? 'Purge' : 'Delete'}</button>
-  <button type="button" data-edit="${done}">Edit</button>
-  at ${timeC} fleet "${text}" ${arrivalC}. (${relativeC})
-</li>`;
+    const renderFn = this.renderFn(this.showDeleted);
+    const expeditionData = this.getExpeditions().map(this.getExpeditionData);
+    renderFn(expeditionData);
   }
 }
 
