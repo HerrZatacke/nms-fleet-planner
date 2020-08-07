@@ -91,22 +91,23 @@ class Storage {
 
   getExpeditionData(rawData) {
     const date = dayjs.unix(rawData.done);
+    const now = dayjs();
 
-    const duration = date
-      .subtract(dayjs().get('hours'), 'hours')
-      .subtract(dayjs().get('minutes'), 'minutes')
-      .subtract(dayjs().get('seconds'), 'seconds');
+    const duration = Math.abs(date.subtract(now).unix());
+
+    const inHours = String(Math.floor(duration / 3600)).padStart(2, '0');
+    const inMinutes = String(Math.floor(duration / 60) % 60).padStart(2, '0');
+    const inSeconds = String(duration % 60).padStart(2, '0');
 
     return {
       ...rawData,
       date,
-      duration,
-      inHours: duration.format('HH'),
-      inMinutes: duration.format('mm'),
-      inSeconds: duration.format('ss'),
-      relativeTime: duration.format('HH:mm:ss'),
-      isPast: !!date.isBefore(dayjs()),
-      arrival: date.isBefore(dayjs()) ? 'arrived' : 'will be back',
+      inHours,
+      inMinutes,
+      inSeconds,
+      relativeTime: `${inHours}:${inMinutes}:${inSeconds}`,
+      isPast: !!date.isBefore(now),
+      arrival: date.isBefore(now) ? 'arrived' : 'will be back',
       time: date.format('ddd, HH:mm'),
       relative: date.fromNow(),
     };
