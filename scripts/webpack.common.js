@@ -22,6 +22,25 @@ module.exports = {
         include: path.join(process.cwd(), 'src'),
       },
       {
+        test: /worker.*\.js$/,
+        use: {
+          loader: 'worker-loader',
+          options: {
+            publicPath: '/scripts/worker/',
+            filename: 'worker.js',
+            worker: {
+              type: 'SharedWorker',
+              options: {
+                type: 'classic',
+                credentials: 'omit',
+                name: 'fleet-notification-worker',
+              },
+            },
+          },
+        },
+        include: path.join(process.cwd(), 'src'),
+      },
+      {
         test: /\.(js|jsx)$/,
         use: {
           loader: 'babel-loader',

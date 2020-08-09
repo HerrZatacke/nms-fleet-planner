@@ -1,8 +1,8 @@
 import '../scss/index.scss';
 import Storage from './tools/storage';
 
-const renderExpedition = ({ done, text, hide, isPast, arrival, relativeTime, time, relative }, showDeleted) => {
-  if (hide && !showDeleted) {
+const renderExpedition = ({ text, hidden, isPast, arrival, relativeTime, time, relative, id }, showDeleted) => {
+  if (hidden && !showDeleted) {
     return '';
   }
 
@@ -16,9 +16,9 @@ const renderExpedition = ({ done, text, hide, isPast, arrival, relativeTime, tim
   const relativeC = relativeColor(relative);
 
   return (`
-<li class="${hide ? 'deleted' : ''}" title="${relativeTime}">
-  <button type="button" data-del="${done}">${showDeleted ? 'Purge' : 'Delete'}</button>
-  <button type="button" data-edit="${done}">Edit</button>
+<li data-id="${id}" class="${hidden ? 'deleted' : ''}" title="${relativeTime}">
+  <button type="button" data-action="del">${showDeleted ? 'Purge' : 'Delete'}</button>
+  <button type="button" data-action="edit">Edit</button>
   at ${timeC} fleet "${text}" ${arrivalC}. (${relativeC})
 </li>`);
 };
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const hoursInput = document.getElementById('hours');
   const minutesInput = document.getElementById('minutes');
   const secondsInput = document.getElementById('seconds');
-  const hiddenDoneInput = document.getElementById('done');
+  const hiddenIdInput = document.getElementById('id');
   const descriptionInput = document.getElementById('description');
 
   const storage = new Storage({
@@ -52,22 +52,26 @@ document.addEventListener('DOMContentLoaded', () => {
     hoursInput.value = '';
     minutesInput.value = '';
     secondsInput.value = '';
-    hiddenDoneInput.value = '';
+    hiddenIdInput.value = '';
     descriptionInput.value = '';
   };
 
   addButton.addEventListener('click', () => {
-    if (hiddenDoneInput.value) {
-      storage.removeExpedition(hiddenDoneInput.value);
+    let success;
+    const hours = parseInt(hoursInput.value || 0, 10);
+    const minutes = parseInt(minutesInput.value || 0, 10);
+    const seconds = parseInt(secondsInput.value || 0, 10);
+    const description = descriptionInput.value.trim();
+
+    if (hiddenIdInput.value) {
+      success = storage.updateExpedition(hours, minutes, seconds, description, hiddenIdInput.value);
+    } else {
+      success = storage.addExpedition(hours, minutes, seconds, description);
     }
 
-    storage.addExpedition(
-      parseInt(hoursInput.value, 10),
-      parseInt(minutesInput.value, 10),
-      parseInt(secondsInput.value, 10),
-      descriptionInput.value.trim(),
-    );
-    clearValues();
+    if (success) {
+      clearValues();
+    }
   });
 
   cancelButton.addEventListener('click', () => {
@@ -80,21 +84,30 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   expeditionsList.addEventListener('click', ({ target }) => {
-    const { del, edit } = target.dataset;
 
-    if (del !== undefined) {
-      storage.removeExpedition(del);
-      clearValues();
-    }
+    const listNode = target.closest('li');
+    const expeditionId = listNode.dataset.id;
+    const expeditionData = storage.getExpedition(expeditionId);
 
-    if (edit !== undefined) {
-      const expeditionData = storage.getExpeditionData(storage.getExpedition(edit));
-      editForm.classList.add('edit-form--edit');
-      hoursInput.value = expeditionData.inHours;
-      minutesInput.value = expeditionData.inMinutes;
-      secondsInput.value = expeditionData.inSeconds;
-      hiddenDoneInput.value = expeditionData.done;
-      descriptionInput.value = expeditionData.text;
+    switch (target.dataset.action) {
+      case 'del':
+        console.log(expeditionId);
+        storage.removeExpedition(expeditionId);
+        clearValues();
+        break;
+
+      case 'edit':
+        // eslint-disable-next-line no-case-declarations
+        editForm.classList.add('edit-form--edit');
+        hoursInput.value = expeditionData.inHours;
+        minutesInput.value = expeditionData.inMinutes;
+        secondsInput.value = expeditionData.inSeconds;
+        hiddenIdInput.value = expeditionData.id;
+        descriptionInput.value = expeditionData.text;
+        break;
+
+      default:
+        console.log(JSON.stringify(expeditionData, null, 2));
     }
 
   });

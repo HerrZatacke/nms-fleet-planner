@@ -10,12 +10,14 @@
       <div class="edit-form">
         <input type="text" min="0" max="100" step="1" id="hours" placeholder="00" />:<input type="text" min="0" max="60" step="1" id="minutes" placeholder="00" />:<input type="text" min="0" max="60" step="1" id="seconds" placeholder="00" />
         <input type="text" id="description" placeholder="description" />
-        <input type="hidden" id="done" />
+        <input type="hidden" id="id" />
         <button type="button" id="add"></button>
         <button type="button" id="cancel">Cancel</button>
         <button type="button" id="showDeleted">Show Deleted</button>
       </div>
       <ul id="expeditions"></ul>
     </div>
+
+    <button style="position:absolute; bottom: 20px" onclick="console.log(JSON.stringify(JSON.parse(localStorage.getItem('fleet-expeditions')), null, 2))">List localStorage</button>
   </body>
 </html>

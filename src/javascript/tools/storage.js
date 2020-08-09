@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import relTime from 'dayjs/plugin/relativeTime';
+import FleetNotificationWorker from '../worker';
 
 dayjs.extend(relTime);
 
@@ -9,8 +10,40 @@ class Storage {
     this.storageKey = 'fleet-expeditions';
     this.showDeleted = showDeleted || false;
     this.renderFn = renderFn;
-
+    this.workerPort = null;
+    this.initNotifications();
     this.render();
+  }
+
+  initNotifications() {
+    Notification.requestPermission((permission) => {
+      if (permission === 'granted') {
+        const fleetWorker = new FleetNotificationWorker();
+        this.workerPort = fleetWorker.port;
+
+        this.getExpeditions()
+          .forEach((fleet) => this.setUpNotification(fleet));
+
+        window.fw = fleetWorker;
+      }
+    });
+  }
+
+  setUpNotification(expedition) {
+    const { id, inMillis, text, hidden, isPast } = this.getExpeditionData(expedition);
+
+    if (isPast || hidden) {
+      this.workerPort.postMessage({
+        id,
+      });
+      return;
+    }
+
+    this.workerPort.postMessage({
+      id,
+      time: inMillis,
+      message: `Fleet "${text}" has arrived!`,
+    });
   }
 
   setShowDeleted(showDeleted) {
@@ -27,41 +60,85 @@ class Storage {
     return JSON.parse(expeditionsList);
   }
 
-  addExpedition(hours, minutes, seconds = 0, text) {
-    if (isNaN(hours) || isNaN(minutes) || !text.trim()) {
-      return;
-    }
+  static validHMST(hours, minutes, seconds, text) {
+    return (
+      !(isNaN(hours) ||
+      isNaN(minutes) ||
+      isNaN(seconds) ||
+      !text.trim() ||
+      (!hours && !minutes && !seconds))
+    );
+  }
 
-    const expeditions = this.getExpeditions();
-
-    expeditions.push({
+  static createExpeditionData(hours, minutes, seconds, text, identifier = null) {
+    const id = identifier || dayjs().valueOf().toString(10);
+    return {
+      id,
       done: dayjs()
         .add(hours, 'hours')
         .add(minutes, 'minutes')
         .add(seconds, 'seconds')
         .unix() || dayjs().unix(),
       text: text.trim(),
-    });
+    };
+  }
+
+  addExpedition(hours, minutes, seconds, text) {
+    if (!Storage.validHMST(hours, minutes, seconds, text)) {
+      return false;
+    }
+
+    const expeditions = this.getExpeditions();
+    const newExpedition = Storage.createExpeditionData(hours, minutes, seconds, text);
+
+    expeditions.push(newExpedition);
+
+    this.setUpNotification(newExpedition);
 
     localStorage.setItem(this.storageKey, JSON.stringify(this.sortExpeditions(expeditions)));
     this.render();
+    return true;
   }
 
-  removeExpedition(deleteDone) {
+  updateExpedition(hours, minutes, seconds, text, id) {
+    if (!Storage.validHMST(hours, minutes, seconds, text)) {
+      return false;
+    }
+
+    const updatedExpedition = Storage.createExpeditionData(hours, minutes, seconds, text, id);
+    const expeditions = this.getExpeditions()
+      .map((expedition) => (
+        expedition.id === id ? updatedExpedition : expedition
+      ));
+
+    this.setUpNotification(updatedExpedition);
+
+    localStorage.setItem(this.storageKey, JSON.stringify(this.sortExpeditions(expeditions)));
+    this.render();
+    return true;
+  }
+
+  removeExpedition(deleteId) {
     const expeditions = this.getExpeditions()
       .map((expedition) => {
-        const hide = expedition.done === parseInt(deleteDone, 10);
+        if (expedition.id !== deleteId) {
+          return expedition;
+        }
 
-        if (this.showDeleted && hide) {
+        console.log(expedition);
+        this.setUpNotification({
+          ...expedition,
+          hidden: true,
+        });
+
+        if (this.showDeleted) {
           return null;
         }
 
-        return (
-          {
-            ...expedition,
-            hide: hide ? true : expedition.hide,
-          }
-        );
+        return {
+          ...expedition,
+          hidden: true,
+        };
       })
       .filter(Boolean);
 
@@ -84,9 +161,15 @@ class Storage {
       });
   }
 
-  getExpedition(dataDone) {
-    return this.getExpeditions()
-      .find(({ done }) => done === parseInt(dataDone, 10)) || null;
+  getExpedition(expediitionId) {
+    const rawExpeditionData = this.getExpeditions()
+      .find(({ id }) => id === expediitionId) || null;
+
+    if (rawExpeditionData) {
+      return this.getExpeditionData(rawExpeditionData);
+    }
+
+    return null;
   }
 
   getExpeditionData(rawData) {
@@ -105,6 +188,7 @@ class Storage {
       inHours,
       inMinutes,
       inSeconds,
+      inMillis: duration * 1000,
       relativeTime: `${inHours}:${inMinutes}:${inSeconds}`,
       isPast: !!date.isBefore(now),
       arrival: date.isBefore(now) ? 'arrived' : 'will be back',
